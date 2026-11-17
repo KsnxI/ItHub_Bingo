@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0c0a12">
+<title>IThub Bingo</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0c0a12;--cell:#17132a;--line:#2b2447;--violet:#7342ff;--soft:#b9a4ff;--muted:#9a93b8}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--ink);color:#fff;font-family:Manrope,system-ui,-apple-system,"Segoe UI",sans-serif}
+body{min-height:100vh;position:relative;overflow-x:hidden}
+body::before{content:"";position:absolute;inset:0 0 auto 0;height:150px;background:var(--violet);clip-path:polygon(0 0,100% 0,100% 45%,0 90%)}
+.wrap{position:relative;max-width:460px;margin:0 auto;padding:max(14px,env(safe-area-inset-top)) 12px max(20px,env(safe-area-inset-bottom))}
+header{display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:30px;letter-spacing:-.03em}
+.logo{display:block;width:30px;height:30px;border:5px solid #fff;border-radius:3px;position:relative;flex:none}
+.logo::after{content:"";position:absolute;inset:6px;background:#fff}
+.strip{background:#fff;color:var(--ink);font-weight:800;font-size:22px;letter-spacing:-.01em;padding:6px 16px;transform:rotate(-3deg);
+clip-path:polygon(0 12%,5% 0,13% 9%,22% 0,31% 8%,40% 0,50% 9%,60% 0,70% 8%,80% 0,90% 9%,100% 0,100% 88%,94% 100%,84% 91%,74% 100%,64% 92%,54% 100%,44% 91%,34% 100%,24% 92%,14% 100%,6% 91%,0 100%)}
+.date{margin:6px 0 0;font-weight:700;font-size:15px}
+.prog{display:flex;justify-content:space-between;margin-top:58px;font-size:13px;font-weight:700;color:var(--soft)}
+.bar{height:4px;background:var(--line);border-radius:2px;margin:6px 0 12px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--violet);transition:width .25s}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.cell{position:relative;aspect-ratio:.86;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px;
+background:var(--cell);border:1px solid var(--line);border-radius:12px;color:#fff;cursor:pointer;
+font:700 clamp(9px,2.7vw,11.5px)/1.15 Manrope,system-ui,sans-serif;hyphens:auto;overflow-wrap:anywhere}
+.cell:focus-visible,.btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.cell.info::before{content:"i";position:absolute;left:4px;top:4px;width:12px;height:12px;border:1px solid var(--soft);border-radius:50%;
+font:italic 700 8px/10px Georgia,serif;color:var(--soft)}
+.cell.on{background:var(--violet);border-color:var(--soft);animation:stamp .18s ease-out}
+.cell.on::after{content:"✓";position:absolute;right:5px;top:2px;font-size:11px}
+.cell.on.info::before{border-color:#fff;color:#fff}
+.cell.win{background:#fff;color:var(--ink);border-color:#fff}
+.cell.win::before{border-color:var(--ink)!important;color:var(--ink)!important}
+.cell.free{cursor:default}
+.cell.free .logo{width:26px;height:26px;border-width:4px}
+.cell.free .logo::after{inset:5px}
+.cell.free.win .logo{border-color:var(--ink)}.cell.free.win .logo::after{background:var(--ink)}
+@keyframes stamp{from{transform:scale(.9) rotate(-3deg)}to{transform:none}}
+.foot{text-align:center;color:var(--muted);font-size:12px;font-weight:500;margin:14px 0 0}
+.foot.timer{margin-top:6px;color:var(--soft);font-weight:800;font-size:14px;font-variant-numeric:tabular-nums}
+.btn{display:block;width:100%;border:0;border-radius:14px;padding:14px;font:800 16px Manrope,system-ui,sans-serif;background:var(--violet);color:#fff;cursor:pointer;margin-top:12px}
+.btn.alt{background:transparent;border:1px solid var(--line);color:#fff}
+.scrim{position:fixed;inset:0;background:rgba(12,10,18,.7);opacity:0;pointer-events:none;transition:opacity .2s}
+.scrim.show{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-width:460px;margin:0 auto;background:#fff;color:var(--ink);border-radius:22px 22px 0 0;
+padding:22px 18px max(18px,env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .22s ease-out}
+.sheet.show{transform:none}
+.sheet h2{margin:0 0 8px;font-size:22px;letter-spacing:-.02em}
+.sheet p{margin:0;font-size:16px;line-height:1.45;font-weight:500}
+.fin{position:fixed;inset:0;background:rgba(12,10,18,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
+.fin[hidden]{display:none}
+.fin img{width:150px;height:150px;border-radius:26px;object-fit:cover;transform:rotate(3deg);margin-bottom:22px}
+.fin .strip{font-size:clamp(30px,10vw,44px);padding:10px 26px;animation:pop .35s cubic-bezier(.2,1.6,.4,1)}
+.fin p{max-width:300px;font-size:17px;line-height:1.4;font-weight:700;margin:22px 0 4px}
+.fin .btn{max-width:320px}
+@keyframes pop{from{transform:scale(.4) rotate(-10deg)}to{transform:rotate(-3deg)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <div class="brand"><i class="logo"></i><span>IThub</span></div>
+    <b class="strip">BINGO</b>
+  </header>
+  <p class="date" id="date"></p>
+  <div class="prog"><span id="cnt"></span><span id="lns"></span></div>
+  <div class="bar"><i id="fill"></i></div>
+  <div class="grid" id="grid" role="group" aria-label="Карточка бинго"></div>
+  <p class="foot" id="foot">Отмечай то, что случилось с тобой сегодня. Клетки с «i» раскрывают факт или термин.</p>
+  <p class="foot timer" id="timer"></p>
+  <button class="btn" id="share" hidden>Поделиться результатом</button>
+</main>
+
+<div class="scrim" id="scrim"></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t" aria-hidden="true">
+  <h2 id="sh-t"></h2>
+  <p id="sh-p"></p>
+  <button class="btn" id="sh-btn"></button>
+</section>
+
+<section class="fin" id="win" role="dialog" aria-modal="true" aria-labelledby="win-t" hidden>
+  <img src="avatar.jpg" alt="" onerror="this.remove()">
+  <b class="strip" id="win-t"></b>
+  <p id="win-p"></p>
+  <button class="btn" id="win-share">Поделиться</button>
+  <button class="btn alt" id="win-close">Продолжить игру</button>
+</section>
+
+<script>
+// ===== Настройки =====
+const CONFIG = {
+  share: "https://t.me/ithub_bingo_bot/bingo", // ссылка на мини-апп (из BotFather)
+  tz: "Europe/Moscow"                   // часовой пояс колледжа: в 00:00 по нему приходит новая карточка
+};
+
+// ===== Содержимое клеток =====
+// Мемы: отмечаем, если это случилось с тобой
+const M = ["Работает у меня локально","Забыл(а) сохранить файл","Спас Ctrl+Z","Баг из-за запятой","Гуглю то же, что вчера",
+"Код со Stack Overflow","Код работает, но почему?","Не трогай — работает","Начал(а) задание ночью","LXP не открывается",
+"Wi-Fi тормозит","Забыл(а) тетрадь","Кофе вместо завтрака","Опоздал(а) на первую пару","Забыл(а) зарядку",
+"Ноутбук на 3%","push в main без проверки","Вкладок открыто 20+","Файл final_final2","Перезагрузил(а) — помогло",
+"Ищешь розетку","Чинишь баг — ломаешь три","Пара пролетела","Очередь в столовой","Сдал(а) за минуту до срока",
+"Спросил(а) у нейросети","Забыл(а) зонт","Наушники запутались","Усталость со второй пары","Тёмная тема, только она",
+"«Это же быстро»","Не понимаю свой код"];
+// Факты: [название, текст]
+const F = [
+["Мотылёк в компьютере","В 1947 году в реле компьютера Harvard Mark II нашли мотылька и приклеили к журналу. Слово «баг» было и раньше, но эта история стала легендой."],
+["Первая программистка","Ада Лавлейс в 1843 году описала алгоритм для машины Бэббиджа. Его считают первой компьютерной программой. Саму машину так и не достроили."],
+["Первое сообщение: LO","В 1969 году по ARPANET (предку интернета) хотели отправить слово LOGIN. Система упала после двух букв, и получилось «LO»."],
+["Мышь из дерева","Первую компьютерную мышь сделал Дуглас Энгельбарт в 1960-х. Корпус был деревянный, а кнопка одна."],
+["Python не про змей","Язык назван в честь британской комик-группы Monty Python. Змеи появились на обложках и логотипах позже."],
+["Первый .com","Первый зарегистрированный домен в зоне .com — symbolics.com, 15 марта 1985 года."],
+["Тетрис из Москвы","Тетрис придумал Алексей Пажитнов в 1984 году в Москве, в Вычислительном центре Академии наук."],
+["Диск весом в тонну","Жёсткий диск IBM RAMAC 1956 года вмещал около 5 МБ и весил больше тонны. Сегодня столько занимает одна фотография с телефона."],
+["МЭСМ, Киев, 1950","МЭСМ — первый в СССР и континентальной Европе электронный компьютер. Его создал Сергей Лебедев, запуск состоялся в 1950 году."],
+["Компьютер — человек","Раньше «компьютером» называли человека, который считает вручную. Машины забрали это слово позже."],
+["Google = BackRub","В 1996 году Google начинался как студенческий проект Стэнфорда и назывался BackRub."],
+["Первый вирус","Creeper (1971) — экспериментальная программа, которая сама перебиралась между компьютерами сети и писала: «I'm the creeper, catch me if you can!»"]];
+// Термины: [название, объяснение]
+const T = [
+["Деплой","Выкладка готовой программы туда, где ею пользуются люди: на сервер или в магазин приложений."],
+["Коммит","Сохранённая точка в истории проекта в Git: что изменили и зачем. К ней всегда можно вернуться."],
+["Репозиторий","Папка проекта вместе со всей историей изменений. Живёт, например, на GitHub."],
+["API","Способ, которым одна программа просит данные или действие у другой. Как меню в кафе: заказываешь, а кухню не видишь."],
+["Фреймворк","Готовый каркас для проекта: базовые части уже написаны, ты добавляешь своё."],
+["Рефакторинг","Переписать код чище и понятнее, не меняя того, что он делает."],
+["Алгоритм","Чёткая последовательность шагов для решения задачи. Рецепт борща — тоже алгоритм."],
+["Компилятор","Программа, которая переводит твой код на язык, понятный процессору."],
+["Переменная","Именованная коробочка в памяти, куда программа кладёт значение: возраст, счёт, имя."],
+["Дебаг","Поиск и исправление ошибок в коде. Часто начинается со слов «а почему оно так?»"]];
+
+// ===== Карточка дня: одинаковая у всех, новая каждый день =====
+const now = new Date();
+const dayKey = new Intl.DateTimeFormat("en-CA", {timeZone: CONFIG.tz}).format(now);
+const dayLabel = new Intl.DateTimeFormat("ru-RU", {timeZone: CONFIG.tz, weekday: "long", day: "numeric", month: "long"}).format(now);
+function hash(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function pick(arr,n,r){const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a.slice(0,n)}
+const r = rng(hash("ithub-bingo-" + dayKey));
+const mix = pick([
+  ...pick(M,14,r).map(t=>({t})),
+  ...pick(F,6,r).map(([t,n])=>({t,n})),
+  ...pick(T,4,r).map(([t,n])=>({t,n}))
+],24,r);
+let cells = [...mix.slice(0,12), {free:true}, ...mix.slice(12)];
+
+// ===== Состояние =====
+const KEY = "ithub-bingo:" + dayKey;
+let st = {m: Array(25).fill(false), won: false, full: false};
+try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.m) st = s; } catch(e) {}
+st.m[12] = true;
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch(e) {} };
+
+const LINES = [];
+for (let i=0;i<5;i++){LINES.push([0,1,2,3,4].map(c=>i*5+c));LINES.push([0,1,2,3,4].map(c=>c*5+i))}
+LINES.push([0,6,12,18,24],[4,8,12,16,20]);
+const doneLines = () => LINES.filter(l => l.every(i => st.m[i]));
+
+// ===== Telegram =====
+const tg = window.Telegram && Telegram.WebApp;
+try { tg.ready(); tg.expand(); tg.setHeaderColor("#0c0a12"); tg.setBackgroundColor("#0c0a12"); } catch(e) {}
+const buzz = k => { try { k ? tg.HapticFeedback.notificationOccurred("success") : tg.HapticFeedback.impactOccurred("light"); } catch(e) {} };
+function share(){
+  const text = "Собрал(а) бинго в IThub Bingo, " + dayLabel + " 💜 Заходи, у тебя тоже получится";
+  const u = "https://t.me/share/url?url=" + encodeURIComponent(CONFIG.share) + "&text=" + encodeURIComponent(text);
+  try { tg.openTelegramLink(u); } catch(e) { window.open(u, "_blank"); }
+}
+
+// ===== Отрисовка =====
+const $ = id => document.getElementById(id);
+const grid = $("grid");
+$("date").textContent = dayLabel;
+let btns = [];
+function build(){
+grid.textContent = "";
+btns = cells.map((c,i) => {
+  const b = document.createElement("button");
+  b.className = "cell" + (c.n ? " info" : "") + (c.free ? " free" : "");
+  if (c.free) b.innerHTML = '<i class="logo"></i>'; else b.textContent = c.t;
+  b.onclick = () => c.free ? 0 : tap(i);
+  grid.appendChild(b);
+  return b;
+});
+}
+function render(){
+  const lines = doneLines(), inLine = new Set(lines.flat());
+  btns.forEach((b,i) => {
+    b.classList.toggle("on", st.m[i]);
+    b.classList.toggle("win", inLine.has(i));
+    if (!cells[i].free) b.setAttribute("aria-pressed", st.m[i]);
+  });
+  const n = st.m.filter(Boolean).length - 1;
+  $("cnt").textContent = "Отмечено " + n + " из 24";
+  $("lns").textContent = "Линий: " + lines.length;
+  $("fill").style.width = n / 24 * 100 + "%";
+  $("share").hidden = !st.won;
+}
+function check(){
+  const n = st.m.filter(Boolean).length - 1;
+  if (n === 24 && !st.full) { st.full = st.won = true; save(); return showWin("ПОЛНАЯ КАРТОЧКА", "Все 24 клетки закрыты. Это уже легенда колледжа."); }
+  if (doneLines().length && !st.won) { st.won = true; save(); showWin("БИНГО!", "Линия собрана. Ты точно свой в IThub 💜"); }
+}
+function tap(i){
+  if (cells[i].n) return openSheet(i);
+  st.m[i] = !st.m[i]; buzz(); save(); render(); check();
+}
+
+// ===== Карточка с фактом или термином =====
+let cur = -1;
+const sheet = $("sheet"), scrim = $("scrim");
+function openSheet(i){
+  cur = i;
+  $("sh-t").textContent = cells[i].t; $("sh-p").textContent = cells[i].n;
+  $("sh-btn").textContent = st.m[i] ? "Снять отметку" : "Узнал(а), отметить";
+  $("sh-btn").className = "btn" + (st.m[i] ? " alt" : "");
+  sheet.classList.add("show"); scrim.classList.add("show"); sheet.setAttribute("aria-hidden","false");
+  $("sh-btn").focus();
+}
+function closeSheet(){ sheet.classList.remove("show"); scrim.classList.remove("show"); sheet.setAttribute("aria-hidden","true"); if (cur>=0) btns[cur].focus(); cur = -1; }
+$("sh-btn").onclick = () => { st.m[cur] = !st.m[cur]; buzz(); save(); closeSheet(); render(); check(); };
+scrim.onclick = closeSheet;
+
+// ===== Поздравление =====
+function showWin(title, text){
+  $("win-t").textContent = title; $("win-p").textContent = text;
+  $("win").hidden = false; buzz(true); $("win-share").focus();
+}
+$("win-close").onclick = () => { $("win").hidden = true; };
+$("win-share").onclick = share;
+$("share").onclick = share;
+document.addEventListener("keydown", e => { if (e.key === "Escape") { $("win").hidden = true; if (cur >= 0) closeSheet(); } });
+
+// ===== Таймер до новой карточки =====
+function secondsLeft(){
+  const p = {};
+  new Intl.DateTimeFormat("en-GB", {timeZone: CONFIG.tz, hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23"})
+    .formatToParts(new Date()).forEach(x => p[x.type] = +x.value);
+  return 86400 - (p.hour * 3600 + p.minute * 60 + p.second);
+}
+const two = n => String(n).padStart(2, "0");
+function tick(){
+  const left = secondsLeft();
+  const today = new Intl.DateTimeFormat("en-CA", {timeZone: CONFIG.tz}).format(new Date());
+  if (today !== dayKey) return location.reload();   // наступил новый день: собираем новую карточку
+  $("timer").textContent = "Новая карточка через " + two(Math.floor(left/3600)) + ":" + two(Math.floor(left%3600/60)) + ":" + two(left%60);
+}
+tick(); setInterval(tick, 1000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) tick(); });
+
+// ===== Карточка дня с сервера (если файла нет, работает встроенный запас) =====
+async function loadDaily(){
+  try{
+    const ac = new AbortController(); setTimeout(() => ac.abort(), 4000);
+    const r = await fetch("daily/" + dayKey + ".json", {cache: "no-cache", signal: ac.signal});
+    if (!r.ok) return;
+    const j = await r.json();
+    if (Array.isArray(j.cells) && j.cells.length === 24) cells = [...j.cells.slice(0,12), {free:true}, ...j.cells.slice(12)];
+  }catch(e){}
+}
+loadDaily().then(() => { build(); render(); });
+</script>
+</body>
+</html>
